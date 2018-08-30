@@ -1,25 +1,17 @@
 import React from 'react';
 import ReactDOM from 'react-dom';
 import { Provider } from 'react-redux';
-import AppRouter from './routers/AppRouter';
+import AppRouter, { history } from './routers/AppRouter';
 import configureStore from './store/configureStore';
+import { login, logout } from './actions/auth';
 import { startSetExpenses } from './actions/expenses'; 
-import './firebase/firebase';
+import { firebase } from './firebase/firebase';
 
 
 import 'normalize.css/normalize.css';
 import './styles/styles.scss';
 
 const store = configureStore();
-
-// store.dispatch(addExpense({ description: 'Water Bill', amount: 4500 }));
-// store.dispatch(addExpense({ description: 'Gas Bill', createdAt:1500, createdAt: 1000 }));
-// store.dispatch(addExpense({ description: 'Rent', amount: 109600 }));
-// store.dispatch(setTextFilter('bill'));
-
-// setTimeout( () => {
-//     store.dispatch(setTextFilter('water'));
-// }, 3000);
 
 const jsx = (
     <Provider store={store}>
@@ -28,9 +20,31 @@ const jsx = (
    
 );
 
+let hasRendered = false;
+const renderApp = () => {
+    if (!hasRendered) {
+        ReactDOM.render(jsx, document.getElementById('app'));
+        hasRendered = true;
+    }
+};
+
 ReactDOM.render(<p>Loading . . .</p>, document.getElementById('app'));
 
-store.dispatch(startSetExpenses()).then(() => {
-    ReactDOM.render(jsx, document.getElementById('app'));
+firebase.auth().onAuthStateChanged((user) => {
+    if (user) {
+        store.dispatch(login(user.uid));
+        store.dispatch(startSetExpenses()).then(() => {
+            renderApp();
+            if (history.location.pathname === '/') {
+                history.push('/dashboard');
+            }
+        });
+       
+    } else {
+        store.dispatch(logout());
+        renderApp();
+        history.push('/');
+        
+    }
 });
 
